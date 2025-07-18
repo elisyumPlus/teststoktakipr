@@ -9,10 +9,13 @@
         table { border-collapse: collapse; width: 100%; margin-top: 20px; }
         th, td { border: 1px solid #ccc; padding: 8px; text-align: center;}
         th { background: #eee; }
-        input[type="text"], input[type="number"] { padding: 6px; margin-right: 10px; }
+        input[type="text"], input[type="number"], select { padding: 6px; margin-right: 10px; }
         button { padding: 7px 16px; margin: 5px; }
         .delete-btn { background: #f44336; color: #fff; border: none; }
         .edit-btn { background: #2196F3; color: #fff; border: none; }
+        .critical { background: #ffcdd2; color: #b71c1c; }
+        #history { background: #fff; border: 1px solid #ccc; padding: 10px; margin-top: 30px; }
+        #history h2 { font-size: 1.2em; }
     </style>
 </head>
 <body>
@@ -21,7 +24,21 @@
     <div>
         <input type="text" id="urunAdi" placeholder="Ürün Adı">
         <input type="number" id="urunMiktari" placeholder="Miktar" min="1">
+        <select id="kategori">
+            <option value="">Kategori Seç</option>
+            <option value="Elektronik">Elektronik</option>
+            <option value="Gıda">Gıda</option>
+            <option value="Kırtasiye">Kırtasiye</option>
+            <option value="Diğer">Diğer</option>
+        </select>
         <button onclick="urunEkle()">Ekle</button>
+    </div>
+    <div style="margin-top:15px;">
+        <input type="text" id="arama" placeholder="Ürün Ara..." oninput="tabloyuGuncelle()" style="width:200px;">
+        <label>
+            Kritik seviye (miktar): 
+            <input type="number" id="kritikSeviye" value="5" min="1" style="width:60px;" oninput="tabloyuGuncelle()">
+        </label>
     </div>
     <table id="stokTablosu">
         <thead>
@@ -29,6 +46,8 @@
                 <th>#</th>
                 <th>Ürün Adı</th>
                 <th>Miktar</th>
+                <th>Kategori</th>
+                <th>Eklenme/Güncellenme</th>
                 <th>İşlem</th>
             </tr>
         </thead>
@@ -36,52 +55,93 @@
         </tbody>
     </table>
 
+    <div id="history">
+        <h2>Hareket Geçmişi</h2>
+        <ul id="hareketListesi"></ul>
+    </div>
+
     <script>
         let stoklar = [];
+        let hareketler = [];
 
         function urunEkle() {
             const urunAdi = document.getElementById('urunAdi').value.trim();
             const urunMiktari = parseInt(document.getElementById('urunMiktari').value);
+            const kategori = document.getElementById('kategori').value;
+            const now = new Date().toLocaleString();
 
-            if (!urunAdi || isNaN(urunMiktari) || urunMiktari < 1) {
-                alert('Lütfen geçerli ürün adı ve miktarı girin!');
+            if (!urunAdi || isNaN(urunMiktari) || urunMiktari < 1 || !kategori) {
+                alert('Lütfen geçerli ürün adı, miktarı ve kategori girin!');
                 return;
             }
 
-            stoklar.push({ ad: urunAdi, miktar: urunMiktari });
+            // Aynı isimde ürün varsa güncelle
+            const mevcutIndex = stoklar.findIndex(u => u.ad.toLowerCase() === urunAdi.toLowerCase());
+            if (mevcutIndex !== -1) {
+                stoklar[mevcutIndex].miktar = urunMiktari;
+                stoklar[mevcutIndex].kategori = kategori;
+                stoklar[mevcutIndex].tarih = now;
+                hareketler.unshift(`[${now}] "${urunAdi}" ürünü güncellendi. Yeni miktar: ${urunMiktari}, kategori: ${kategori}`);
+            } else {
+                stoklar.push({ ad: urunAdi, miktar: urunMiktari, kategori: kategori, tarih: now });
+                hareketler.unshift(`[${now}] "${urunAdi}" ürünü eklendi. Miktar: ${urunMiktari}, kategori: ${kategori}`);
+            }
             tabloyuGuncelle();
+            hareketGuncelle();
             document.getElementById('urunAdi').value = '';
             document.getElementById('urunMiktari').value = '';
+            document.getElementById('kategori').value = '';
         }
 
         function urunSil(index) {
             if (confirm('Bu ürünü silmek istediğinize emin misiniz?')) {
+                const silinen = stoklar[index];
                 stoklar.splice(index, 1);
+                const now = new Date().toLocaleString();
+                hareketler.unshift(`[${now}] "${silinen.ad}" ürünü silindi.`);
                 tabloyuGuncelle();
+                hareketGuncelle();
             }
         }
 
         function urunDuzenle(index) {
-            const yeniMiktar = prompt('Yeni miktar giriniz:', stoklar[index].miktar);
-            if (yeniMiktar !== null) {
-                const miktar = parseInt(yeniMiktar);
-                if (!isNaN(miktar) && miktar > 0) {
-                    stoklar[index].miktar = miktar;
-                    tabloyuGuncelle();
-                } else {
-                    alert('Geçersiz miktar!');
-                }
+            const urun = stoklar[index];
+            const yeniAd = prompt('Yeni ürün adı:', urun.ad);
+            const yeniMiktar = prompt('Yeni miktar:', urun.miktar);
+            const yeniKategori = prompt('Yeni kategori:', urun.kategori);
+            const now = new Date().toLocaleString();
+
+            if (yeniAd && !isNaN(parseInt(yeniMiktar)) && parseInt(yeniMiktar) > 0 && yeniKategori) {
+                stoklar[index] = {
+                    ad: yeniAd,
+                    miktar: parseInt(yeniMiktar),
+                    kategori: yeniKategori,
+                    tarih: now
+                };
+                hareketler.unshift(`[${now}] "${urun.ad}" ürünü düzenlendi. Yeni ad: ${yeniAd}, miktar: ${yeniMiktar}, kategori: ${yeniKategori}`);
+                tabloyuGuncelle();
+                hareketGuncelle();
+            } else {
+                alert('Geçersiz bilgi!');
             }
         }
 
         function tabloyuGuncelle() {
             const tbody = document.querySelector('#stokTablosu tbody');
             tbody.innerHTML = '';
-            stoklar.forEach((urun, i) => {
-                let row = `<tr>
+            const arama = document.getElementById('arama').value.toLowerCase();
+            const kritikSeviye = parseInt(document.getElementById('kritikSeviye').value);
+
+            stoklar
+                .filter(u => u.ad.toLowerCase().includes(arama))
+                .forEach((urun, i) => {
+                let criticalClass = (urun.miktar <= kritikSeviye) ? 'critical' : '';
+                let row = `<tr class="${criticalClass}">
                     <td>${i + 1}</td>
                     <td>${urun.ad}</td>
-                    <td>${urun.miktar}</td>
+                    <td>${urun.miktar} ${urun.miktar <= kritikSeviye ? '<span title="Kritik stok!" style="color:red;">&#9888;</span>' : ''}</td>
+                    <td>${urun.kategori}</td>
+                    <td>${urun.tarih}</td>
                     <td>
                         <button class="edit-btn" onclick="urunDuzenle(${i})">Düzenle</button>
                         <button class="delete-btn" onclick="urunSil(${i})">Sil</button>
@@ -90,6 +150,18 @@
                 tbody.innerHTML += row;
             });
         }
+
+        function hareketGuncelle() {
+            const hareketListesi = document.getElementById('hareketListesi');
+            hareketListesi.innerHTML = '';
+            hareketler.slice(0, 10).forEach(h => {
+                hareketListesi.innerHTML += `<li>${h}</li>`;
+            });
+        }
+
+        // İlk açılışta tablo ve hareket geçmişi boş olsun
+        tabloyuGuncelle();
+        hareketGuncelle();
     </script>
 </body>
 </html>
