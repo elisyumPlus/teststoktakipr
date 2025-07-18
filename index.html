@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Kolay Stok Takip Programı</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f8f8f8; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: center;}
+        th { background: #eee; }
+        input[type="text"], input[type="number"] { padding: 6px; margin-right: 10px; }
+        button { padding: 7px 16px; margin: 5px; }
+        .delete-btn { background: #f44336; color: #fff; border: none; }
+        .edit-btn { background: #2196F3; color: #fff; border: none; }
+    </style>
+</head>
+<body>
+
+    <h1>Kolay Stok Takip Programı</h1>
+    <div>
+        <input type="text" id="urunAdi" placeholder="Ürün Adı">
+        <input type="number" id="urunMiktari" placeholder="Miktar" min="1">
+        <button onclick="urunEkle()">Ekle</button>
+    </div>
+    <table id="stokTablosu">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Ürün Adı</th>
+                <th>Miktar</th>
+                <th>İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        let stoklar = [];
+
+        function urunEkle() {
+            const urunAdi = document.getElementById('urunAdi').value.trim();
+            const urunMiktari = parseInt(document.getElementById('urunMiktari').value);
+
+            if (!urunAdi || isNaN(urunMiktari) || urunMiktari < 1) {
+                alert('Lütfen geçerli ürün adı ve miktarı girin!');
+                return;
+            }
+
+            stoklar.push({ ad: urunAdi, miktar: urunMiktari });
+            tabloyuGuncelle();
+            document.getElementById('urunAdi').value = '';
+            document.getElementById('urunMiktari').value = '';
+        }
+
+        function urunSil(index) {
+            if (confirm('Bu ürünü silmek istediğinize emin misiniz?')) {
+                stoklar.splice(index, 1);
+                tabloyuGuncelle();
+            }
+        }
+
+        function urunDuzenle(index) {
+            const yeniMiktar = prompt('Yeni miktar giriniz:', stoklar[index].miktar);
+            if (yeniMiktar !== null) {
+                const miktar = parseInt(yeniMiktar);
+                if (!isNaN(miktar) && miktar > 0) {
+                    stoklar[index].miktar = miktar;
+                    tabloyuGuncelle();
+                } else {
+                    alert('Geçersiz miktar!');
+                }
+            }
+        }
+
+        function tabloyuGuncelle() {
+            const tbody = document.querySelector('#stokTablosu tbody');
+            tbody.innerHTML = '';
+            stoklar.forEach((urun, i) => {
+                let row = `<tr>
+                    <td>${i + 1}</td>
+                    <td>${urun.ad}</td>
+                    <td>${urun.miktar}</td>
+                    <td>
+                        <button class="edit-btn" onclick="urunDuzenle(${i})">Düzenle</button>
+                        <button class="delete-btn" onclick="urunSil(${i})">Sil</button>
+                    </td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+    </script>
+</body>
+</html>
